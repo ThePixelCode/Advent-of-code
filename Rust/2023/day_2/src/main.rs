@@ -87,5 +87,58 @@ fn solve_part_1(file_content: String) {
 }
 
 fn solve_part_2(file_content: String) {
-    todo!()
+    let games = Regex::new(r"^Game \d+: (?P<sets>.+)$").expect("regex doesn't work :(");
+    let sets =
+        Regex::new(r"(?P<set>\d+) (?P<color>(?:blue|red|green))").expect("regex doesn't work :(");
+    let mut sum = 0_u32;
+    for line in file_content.lines() {
+        let caps = games.captures(line).unwrap();
+        let game: Vec<(u32, u32, u32)> = caps["sets"]
+            .split("; ")
+            .map(|set| {
+                let set: Vec<(u32, CubeColors)> = set
+                    .split(", ")
+                    .map(|cube| {
+                        let cube = sets.captures(cube).unwrap();
+                        (
+                            String::from(&cube["set"])
+                                .parse::<u32>()
+                                .expect("number expected on set"),
+                            CubeColors::try_from(&cube["color"]).expect("expected RGB color"),
+                        )
+                    })
+                    .collect();
+                let mut red: Option<(u32, CubeColors)> = None;
+                let mut green: Option<(u32, CubeColors)> = None;
+                let mut blue: Option<(u32, CubeColors)> = None;
+                for i in set {
+                    match i.1 {
+                        CubeColors::Red => red = Some(i),
+                        CubeColors::Green => green = Some(i),
+                        CubeColors::Blue => blue = Some(i),
+                    }
+                }
+                let red = red.unwrap_or((0, CubeColors::Red));
+                let green = green.unwrap_or((0, CubeColors::Green));
+                let blue = blue.unwrap_or((0, CubeColors::Blue));
+                (red.0, green.0, blue.0)
+            })
+            .collect();
+        let mut max_red = 0_u32;
+        let mut max_green = 0_u32;
+        let mut max_blue = 0_u32;
+        for i in game {
+            if i.0 > max_red {
+                max_red = i.0
+            }
+            if i.1 > max_green {
+                max_green = i.1
+            }
+            if i.2 > max_blue {
+                max_blue = i.2
+            }
+        }
+        sum += max_red * max_green * max_blue;
+    }
+    println!("Sum: {}", sum);
 }
