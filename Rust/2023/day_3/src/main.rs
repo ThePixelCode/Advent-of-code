@@ -31,6 +31,7 @@ struct Number {
 
 #[derive(Debug, PartialEq, Eq)]
 struct Symbol {
+    value: Box<str>,
     row: usize,
     col: usize,
 }
@@ -89,7 +90,7 @@ fn get_numbers_and_symbols(text: &str) -> (Rc<[Symbol]>, Rc<[Number]>) {
                     num.push(c);
                     last_num = Some(i.0);
                 }
-                _ => {
+                c => {
                     if first_num.is_some() {
                         numbers.push(Number {
                             value: num.parse::<u32>().unwrap(),
@@ -101,7 +102,11 @@ fn get_numbers_and_symbols(text: &str) -> (Rc<[Symbol]>, Rc<[Number]>) {
                         first_num = None;
                         last_num = None;
                     }
-                    symbols.push(Symbol { row, col: i.0 });
+                    symbols.push(Symbol {
+                        value: c.to_string().into(),
+                        row,
+                        col: i.0,
+                    });
                 }
             }
         }
@@ -135,5 +140,53 @@ fn solve_part_1(file_content: String) {
 }
 
 fn solve_part_2(file_content: String) {
-    todo!()
+    let (symbols, numbers) = get_numbers_and_symbols(&file_content);
+    // let mut sum: u32 = numbers
+    //     .iter()
+    //     .filter_map(|number| {
+    //         if symbols
+    //             .iter()
+    //             .filter(|sym| sym.value.as_ref() != "*")
+    //             .any(|symbol| number.is_touching_a_symbol(symbol))
+    //         {
+    //             return Some(number.value);
+    //         }
+    //         None
+    //     })
+    //     .sum();
+    let star_gear = numbers
+        .iter()
+        .filter(|number| {
+            symbols
+                .iter()
+                .filter(|sym| sym.value.as_ref() == "*")
+                .any(|symbol| number.is_touching_a_symbol(symbol))
+        })
+        .collect::<Rc<[&Number]>>();
+    let sum = symbols
+        .iter()
+        .filter_map(|symbol| {
+            if symbol.value.as_ref() != "*" {
+                return None;
+            }
+            return Some(
+                star_gear
+                    .iter()
+                    .filter_map(|number| {
+                        if number.is_touching_a_symbol(symbol) {
+                            return Some(number.value);
+                        }
+                        None
+                    })
+                    .collect::<Rc<[u32]>>(),
+            );
+        })
+        .filter_map(|numbers| {
+            if numbers.len() == 2 {
+                return Some(numbers[0] * numbers[1]);
+            }
+            None
+        })
+        .sum::<u32>();
+    println!("Sum: {}", sum)
 }
