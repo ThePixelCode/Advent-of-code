@@ -80,5 +80,26 @@ fn solve_part_1(file_content: String) {
 }
 
 fn solve_part_2(file_content: String) {
-    todo!()
+    let cards = file_content
+        .lines()
+        .map(|line| extract_numbers_from_str(line))
+        .collect::<Rc<[(Rc<[u32]>, Rc<[u32]>)]>>();
+    let mut total_cards = cards.iter().map(|_| 1_u32).collect::<Vec<u32>>();
+    for (index, card) in cards.iter().enumerate() {
+        let winning_cards = card
+            .1
+            .iter()
+            .filter_map(|x| {
+                if card.0.iter().any(|y| x == y) {
+                    return Some(x);
+                }
+                None
+            })
+            .collect::<Box<[&u32]>>()
+            .len();
+        for new_card_index in (index + 1)..=(index + winning_cards) {
+            total_cards[new_card_index] += total_cards[index];
+        }
+    }
+    println!("Sum: {}", total_cards.iter().sum::<u32>());
 }
