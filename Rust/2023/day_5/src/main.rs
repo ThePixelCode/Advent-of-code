@@ -7,7 +7,7 @@ fn main() {
         exit(1);
     }
     let path_file = &args[1];
-    let method = args[2].parse::<u32>().unwrap();
+    let method = args[2].parse::<i64>().unwrap();
     let mut file = OpenOptions::new().read(true).open(path_file).unwrap();
     let mut file_content = String::new();
     file.read_to_string(&mut file_content).unwrap();
@@ -23,22 +23,29 @@ fn main() {
 
 #[derive(Debug, Default, Clone, Copy)]
 struct Range {
-    destination_start: u64,
-    source_start: u64,
-    lenght: u64,
+    destination_start: i64,
+    source_start: i64,
+    lenght: i64,
 }
 impl Range {
-    fn new(souce: u64, destination: u64, lenght: u64) -> Self {
+    fn new(souce: i64, destination: i64, lenght: i64) -> Self {
         Range {
             source_start: souce,
             destination_start: destination,
             lenght,
         }
     }
+
+    fn search_on_range(&self, source: &i64) -> Option<i64> {
+        if (self.source_start..(self.source_start + self.lenght)).contains(source) {
+            return Some(*source + (self.destination_start - self.source_start));
+        }
+        None
+    }
 }
 
-impl Into<HashMap<u64, u64>> for Range {
-    fn into(self) -> HashMap<u64, u64> {
+impl Into<HashMap<i64, i64>> for Range {
+    fn into(self) -> HashMap<i64, i64> {
         let mut map = HashMap::new();
         for index in 0..self.lenght {
             map.entry(self.source_start + index)
@@ -51,7 +58,7 @@ impl Into<HashMap<u64, u64>> for Range {
 #[derive(Debug)]
 struct Map {
     maps: Rc<[Range]>,
-    lenght: u64,
+    lenght: i64,
 }
 
 impl Map {
@@ -71,13 +78,25 @@ impl Map {
             );
         Map { maps, lenght }
     }
+
+    fn search_on_table(&self, source: i64) -> i64 {
+        let map_search = self
+            .maps
+            .iter()
+            .filter_map(|x| x.search_on_range(&source))
+            .collect::<Vec<i64>>();
+        if map_search.len() == 1 {
+            return map_search[0];
+        }
+        return source;
+    }
 }
 
-impl Into<HashMap<u64, u64>> for Map {
-    fn into(self) -> HashMap<u64, u64> {
+impl Into<HashMap<i64, i64>> for Map {
+    fn into(self) -> HashMap<i64, i64> {
         let mut entire_map = HashMap::new();
         for partial_map in self.maps.iter() {
-            entire_map.extend(Into::<HashMap<u64, u64>>::into(*partial_map))
+            entire_map.extend(Into::<HashMap<i64, i64>>::into(*partial_map))
         }
         for index in 0..self.lenght {
             entire_map.entry(index).or_insert(index);
@@ -86,7 +105,7 @@ impl Into<HashMap<u64, u64>> for Map {
     }
 }
 
-fn parse_map_from_str(data: &str) -> (Vec<u64>, Map, Map, Map, Map, Map, Map, Map) {
+fn parse_map_from_str(data: &str) -> (Vec<i64>, Map, Map, Map, Map, Map, Map, Map) {
     enum Fase {
         None,
         SeedToSoil,
@@ -122,7 +141,7 @@ fn parse_map_from_str(data: &str) -> (Vec<u64>, Map, Map, Map, Map, Map, Map, Ma
                     }
                     Some(x)
                 })
-                .map(|x| x.parse::<u64>().unwrap())
+                .map(|x| x.parse::<i64>().unwrap())
                 .for_each(|x| seeds.push(x));
             continue;
         }
@@ -141,9 +160,9 @@ fn parse_map_from_str(data: &str) -> (Vec<u64>, Map, Map, Map, Map, Map, Map, Ma
                         if x.trim().is_empty() {
                             return None;
                         }
-                        Some(x.trim().parse::<u64>().unwrap())
+                        Some(x.trim().parse::<i64>().unwrap())
                     })
-                    .collect::<Rc<[u64]>>();
+                    .collect::<Rc<[i64]>>();
                 match fase {
                     Fase::None => panic!(),
                     Fase::SeedToSoil => seed_to_soil_map.push(Range::new(map[1], map[0], map[2])),
@@ -220,22 +239,15 @@ fn solve_part_1(file_content: String) {
         temperature_to_humidity_map,
         humidity_to_location_map,
     ) = parse_map_from_str(&file_content);
-    let seed_to_soil_map = Into::<HashMap<u64, u64>>::into(seed_to_soil_map);
-    let soil_to_fertilizer_map = Into::<HashMap<u64, u64>>::into(soil_to_fertilizer_map);
-    let fertilizer_to_water_map = Into::<HashMap<u64, u64>>::into(fertilizer_to_water_map);
-    let water_to_light_map = Into::<HashMap<u64, u64>>::into(water_to_light_map);
-    let light_to_temperature_map = Into::<HashMap<u64, u64>>::into(light_to_temperature_map);
-    let temperature_to_humidity_map = Into::<HashMap<u64, u64>>::into(temperature_to_humidity_map);
-    let humidity_to_location_map = Into::<HashMap<u64, u64>>::into(humidity_to_location_map);
     let solution = seeds
         .iter()
-        .map(|x| seed_to_soil_map.get(x).unwrap())
-        .map(|x| soil_to_fertilizer_map.get(x).unwrap())
-        .map(|x| fertilizer_to_water_map.get(x).unwrap())
-        .map(|x| water_to_light_map.get(x).unwrap())
-        .map(|x| light_to_temperature_map.get(x).unwrap())
-        .map(|x| temperature_to_humidity_map.get(x).unwrap())
-        .map(|x| humidity_to_location_map.get(x).unwrap())
+        .map(|x| seed_to_soil_map.search_on_table(*x))
+        .map(|x| soil_to_fertilizer_map.search_on_table(x))
+        .map(|x| fertilizer_to_water_map.search_on_table(x))
+        .map(|x| water_to_light_map.search_on_table(x))
+        .map(|x| light_to_temperature_map.search_on_table(x))
+        .map(|x| temperature_to_humidity_map.search_on_table(x))
+        .map(|x| humidity_to_location_map.search_on_table(x))
         .min()
         .unwrap();
     println!("Solution: {}", solution)
