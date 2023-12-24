@@ -42,6 +42,72 @@ impl Range {
         }
         None
     }
+
+    fn process_range_search(&self, ranges: &mut Vec<(i64, i64)>) -> Vec<(i64, i64)> {
+        let mut new_ranges = Vec::new();
+        let mut pending_ranges = Vec::new();
+        let (range_start, range_end) = (self.source_start, (self.source_start + self.lenght));
+        for range in &mut *ranges {
+            match range {
+                (start, end) if *start >= range_start && *end < range_end => {
+                    let range = (
+                        self.search_on_range(start).unwrap(),
+                        self.search_on_range(end).unwrap(),
+                    );
+                    new_ranges.push(range)
+                }
+                (start, end) if *start >= range_start && *end == range_end => {
+                    let range = (
+                        self.search_on_range(start).unwrap(),
+                        (self.destination_start + self.lenght),
+                    );
+                    new_ranges.push(range)
+                }
+                (start, end) if *start >= range_start && *start < range_end && *end > range_end => {
+                    let range = (
+                        self.search_on_range(start).unwrap(),
+                        (self.destination_start + self.lenght),
+                    );
+                    new_ranges.push(range);
+                    pending_ranges.push((range_end, *end))
+                }
+                (start, _) if *start >= range_end => pending_ranges.push(*range),
+                (_, end) if *end <= range_start => pending_ranges.push(*range),
+                (start, end) if *start < range_start && *end < range_end => {
+                    let range = (self.destination_start, self.search_on_range(end).unwrap());
+                    new_ranges.push(range);
+                    pending_ranges.push((*start, self.source_start))
+                }
+                (start, end) if *start < range_start && *end == range_end => {
+                    let range = (
+                        self.destination_start,
+                        (self.destination_start + self.lenght),
+                    );
+                    new_ranges.push(range);
+                    pending_ranges.push((*start, self.source_start))
+                }
+                (start, end) if *start < range_start && *end > range_end => {
+                    let range = (
+                        self.destination_start,
+                        (self.destination_start + self.lenght),
+                    );
+                    new_ranges.push(range);
+                    pending_ranges.push((*start, self.source_start));
+                    pending_ranges.push(((self.source_start + self.lenght), *end))
+                }
+                _ => {
+                    dbg!((range_start, range_end));
+                    dbg!(range);
+                    unreachable!()
+                }
+            }
+        }
+        ranges.clear();
+        for ele in pending_ranges {
+            ranges.push(ele);
+        }
+        new_ranges
+    }
 }
 
 impl Into<HashMap<i64, i64>> for Range {
@@ -89,6 +155,15 @@ impl Map {
             return map_search[0];
         }
         return source;
+    }
+
+    fn search_range_on_table(&self, mut ranges: Vec<(i64, i64)>) -> Vec<(i64, i64)> {
+        let mut results = Vec::new();
+        for map in self.maps.iter() {
+            results.push(map.process_range_search(&mut ranges));
+        }
+        results.push(ranges);
+        results.concat()
     }
 }
 
@@ -253,6 +328,46 @@ fn solve_part_1(file_content: String) {
     println!("Solution: {}", solution)
 }
 
+fn convert_seeds_from_problem_one_to_two(seeds: Vec<i64>) -> Vec<(i64, i64)> {
+    if seeds.len() % 2 != 0 {
+        panic!("The lenght of the seeds has no sense");
+    }
+    let mut new_seeds = Vec::new();
+    let mut seed = None;
+    for seed_of_range in seeds {
+        if let Some(seed_start) = seed {
+            new_seeds.push((seed_start, (seed_start + seed_of_range)));
+            seed = None;
+        } else {
+            seed = Some(seed_of_range);
+        }
+    }
+    new_seeds
+}
+
 fn solve_part_2(file_content: String) {
-    todo!()
+    let (
+        seeds,
+        seed_to_soil_map,
+        soil_to_fertilizer_map,
+        fertilizer_to_water_map,
+        water_to_light_map,
+        light_to_temperature_map,
+        temperature_to_humidity_map,
+        humidity_to_location_map,
+    ) = parse_map_from_str(&file_content);
+    let seeds = Vec::from([convert_seeds_from_problem_one_to_two(seeds)]);
+    let solution = seeds
+        .iter()
+        .map(|x| seed_to_soil_map.search_range_on_table(x.clone()))
+        .map(|x| soil_to_fertilizer_map.search_range_on_table(x))
+        .map(|x| fertilizer_to_water_map.search_range_on_table(x))
+        .map(|x| water_to_light_map.search_range_on_table(x))
+        .map(|x| light_to_temperature_map.search_range_on_table(x))
+        .map(|x| temperature_to_humidity_map.search_range_on_table(x))
+        .map(|x| humidity_to_location_map.search_range_on_table(x))
+        .flat_map(|range| range.iter().map(|(x, _)| *x).collect::<Vec<i64>>())
+        .min()
+        .unwrap();
+    println!("Solution: {}", solution)
 }
