@@ -2,7 +2,7 @@ use std::fmt::{Debug, Display};
 
 fn main() {
     use clap::Parser;
-    let (mut file, method) = match advent_of_code_day_14::Args::parse().get_info() {
+    let (mut file, method) = match day_14::Args::parse().get_info() {
         Ok(args) => args,
         Err(e) => {
             eprintln!("{:?}", e);
