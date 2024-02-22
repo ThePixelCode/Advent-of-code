@@ -1,3 +1,5 @@
+pub mod derivator;
+
 #[derive(Debug, clap::Parser)]
 #[command(version, about="Solve advent of code", long_about=None)]
 pub struct Args {
