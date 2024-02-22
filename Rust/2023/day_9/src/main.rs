@@ -41,14 +41,9 @@ where
         )
     }
 
-    let prediction = lectures[0].len();
-
     let result = lectures
         .into_iter()
-        .map(|x| {
-            let func = advent_of_code_day_9::derivator::get_derived_function(x);
-            func(prediction)
-        })
+        .map(|x| advent_of_code_day_9::derivator::Derived::new(x).forward_one())
         .sum::<i32>();
 
     T::from(result as u64)
@@ -59,7 +54,21 @@ fn solve_method_2<T>(#[allow(unused_variables)] text: String) -> T
 where
     T: From<u64> + Debug + Display,
 {
-    todo!()
+    let mut lectures = Vec::new();
+    for line in text.lines() {
+        lectures.push(
+            line.split(' ')
+                .map(|x| x.parse::<i32>().unwrap())
+                .collect::<Vec<i32>>(),
+        )
+    }
+
+    let result = lectures
+        .into_iter()
+        .map(|x| advent_of_code_day_9::derivator::Derived::new(x).backward_one())
+        .sum::<i32>();
+
+    T::from(result as u64)
 }
 
 #[cfg(test)]
@@ -89,5 +98,17 @@ mod tests {
         file.read_to_string(&mut buffer).unwrap();
         let result = solve_method_1::<u64>(buffer);
         assert_eq!(result, 1_789_635_132);
+    }
+
+    #[test]
+    fn test_example_method_2() {
+        let mut file = std::fs::OpenOptions::new()
+            .read(true)
+            .open("example_1.txt")
+            .unwrap();
+        let mut buffer = String::new();
+        file.read_to_string(&mut buffer).unwrap();
+        let result = solve_method_2::<u64>(buffer);
+        assert_eq!(result, 2);
     }
 }

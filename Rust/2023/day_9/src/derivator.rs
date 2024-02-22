@@ -1,29 +1,41 @@
-pub fn get_derived_function(pattern: Vec<i32>) -> Box<dyn Fn(usize) -> i32> {
-    if pattern.iter().all(|x| x == &0) {
-        return Box::new(|_| 0);
+#[derive(Debug, Clone)]
+pub struct Derived {
+    derived: Option<Box<Derived>>,
+    pattern: Vec<i32>,
+}
+impl Derived {
+    pub fn new(pattern: Vec<i32>) -> Self {
+        if pattern.iter().all(|x| x == &0) {
+            return Self {
+                derived: None,
+                pattern,
+            };
+        }
+
+        let derived_pattern = pattern
+            .windows(2)
+            .map(|x| x[1] - x[0])
+            .collect::<Vec<i32>>();
+
+        Self {
+            derived: Some(Box::new(Self::new(derived_pattern))),
+            pattern,
+        }
     }
 
-    let new_pattern = pattern
-        .windows(2)
-        .map(|y| y[1] - y[0])
-        .collect::<Vec<i32>>();
-
-    Box::new(move |x| {
-        let derived = get_derived_function(new_pattern.clone());
-        let pattern = pattern.clone();
-        let last_index = pattern.len();
-        let last = *pattern.last().unwrap();
-        if x < last_index {
-            return pattern[x];
+    pub fn forward_one(&self) -> i32 {
+        match &self.derived {
+            None => 0,
+            Some(s) => *self.pattern.last().unwrap() + s.forward_one(),
         }
+    }
 
-        let mut new_value = last;
-        for i in last_index..=x {
-            new_value += derived(i - 1);
+    pub fn backward_one(&self) -> i32 {
+        match &self.derived {
+            None => 0,
+            Some(s) => *self.pattern.first().unwrap() - s.backward_one(),
         }
-
-        new_value
-    })
+    }
 }
 
 #[cfg(test)]
@@ -34,20 +46,16 @@ mod tests {
     #[test]
     fn test_derive() {
         let v = vec![0_i32, 0_i32, 0_i32];
-        let func = get_derived_function(v);
-        let result = func(1);
-        assert_eq!(result, 0);
-        let result = func(5);
+        let func = Derived::new(v);
+        let result = func.forward_one();
         assert_eq!(result, 0);
         let v = vec![0_i32, 1_i32, 2_i32, 3_i32];
-        let func = get_derived_function(v);
-        let result = func(1);
-        assert_eq!(result, 1);
-        let result = (0..10).map(func).collect::<Vec<i32>>();
-        assert_eq!(result, vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+        let func = Derived::new(v);
+        let result = func.forward_one();
+        assert_eq!(result, 4);
         let v = vec![1_i32, 2_i32, 4_i32, 7_i32];
-        let func = get_derived_function(v);
-        let result = (0..10).map(func).collect::<Vec<i32>>();
-        assert_eq!(result, vec![1, 2, 4, 7, 11, 16, 22, 29, 37, 46]);
+        let func = Derived::new(v);
+        let result = func.forward_one();
+        assert_eq!(result, 11);
     }
 }
