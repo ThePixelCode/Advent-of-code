@@ -78,4 +78,16 @@ mod tests {
         let result = solve_method_1::<u64>(buffer);
         assert_eq!(result, 114);
     }
+
+    #[test]
+    fn test_that_problem_1_still_works() {
+        let mut file = std::fs::OpenOptions::new()
+            .read(true)
+            .open("problem_input.txt")
+            .unwrap();
+        let mut buffer = String::new();
+        file.read_to_string(&mut buffer).unwrap();
+        let result = solve_method_1::<u64>(buffer);
+        assert_eq!(result, 1_789_635_132);
+    }
 }
