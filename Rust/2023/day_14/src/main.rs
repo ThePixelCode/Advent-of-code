@@ -2,17 +2,8 @@ use std::fmt::{Debug, Display};
 
 fn main() {
     use clap::Parser;
-    let (mut file, method) = match day_14::Args::parse().get_info() {
+    let (buffer, method) = match day_14::Args::parse().get_info() {
         Ok(args) => args,
-        Err(e) => {
-            eprintln!("{:?}", e);
-            std::process::exit(1)
-        }
-    };
-
-    let mut buffer = String::new();
-    match std::io::Read::read_to_string(&mut file, &mut buffer) {
-        Ok(_) => (),
         Err(e) => {
             eprintln!("{:?}", e);
             std::process::exit(1)
